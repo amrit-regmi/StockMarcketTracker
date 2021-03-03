@@ -8,9 +8,9 @@ const IntervalChooser:FC = () => {
   const [{ graph,portfolio },dispatch] = useStore()
   const intervalLabels = ['10 days','1 month', '6 month' ,'1 year', '5 years', 'ytd', 'max']
   const onItemCLick = (name:intervalLabel) => {
-    //*If the store has intraday data need tore fetch monthly data for each company on portfolio
+    //*If the store has intraday data need to fetch monthly data for each company set visible on portfolio
     // OR
-    //*If the store has intraday data need tore fetch monthly data for each company on portfolio
+    //*If the store has monthly data need to fetch intraday data for each company set visible on portfolio
     if((graph.currentInterval === '10 days' && name !== '10 days') ||  (graph.currentInterval !== '10 days' && name === '10 days')) {
       Object.keys(portfolio).forEach(async (company) => {
         if(portfolio[company].visible){
