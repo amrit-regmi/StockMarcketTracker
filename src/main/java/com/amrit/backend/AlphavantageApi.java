@@ -1,0 +1,216 @@
+package com.amrit.backend;
+
+import com.amrit.backend.Configuration.ApiConfiguration;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Map;
+
+@Service
+public class AlphavantageApi {
+    private final RestTemplate dataFetcher = new RestTemplate();
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final ApiConfiguration config;
+
+    @Autowired
+    public AlphavantageApi(ApiConfiguration config) {
+        this.config = config;
+    }
+
+    /**
+     * Fetches intraday data if the api doesn't respond with properly formatted data return the  cached company data if exist.
+     *
+     * @param function   alphavantage api function
+     * @param symbol     company symbol
+     * @param interval   data interval  1min, 5min, 15min, 30min, 60min for function "TIME_SERIES_INTRADAY", null for  TIME_SERIES_DAILY
+     * @param outputsize full or compact
+     * @param checkCache if the cache should be checked for failsafe and update
+     * @return JsonNode
+     * @throws Exception if error
+     */
+
+    public JsonNode fetchFinancialData(String function, String symbol, String interval, String outputsize, boolean checkCache) throws Exception {
+        String url;
+        if (function.equals("TIME_SERIES_INTRADAY")) {
+            url = config.getendPoint() + "function=" + function + "&symbol=" + symbol + "&interval=" + interval + "&outputsize=" + outputsize + "&apikey=" + config.getkey();
+        } else {
+            interval = "Daily";
+            url = config.getendPoint() + "function=" + function + "&symbol=" + symbol + "&outputsize=" + outputsize + "&apikey=" + config.getkey();
+        }
+
+        boolean isHardCoded = searchInHardCodedCompany(symbol).size() > 0;
+
+        CompanyData cachedCompany = new CompanyData(symbol);
+        String savedData = cachedCompany.readData(interval);
+
+        /*If the checkCache is enabled and data is hardcoded check on cache*/
+        if (isHardCoded && checkCache) {
+            Date yesterday = Date.from(Instant.now().minus(Duration.ofDays(1)));
+
+            if (savedData != null) { //If the data exist on cache
+                JsonNode savedData_json = mapper.readTree(savedData);
+
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                if (function.equals("TIME_SERIES_INTRADAY")) dateFormat.applyPattern("yyyy-MM-dd hh:mm:ss");
+
+                Date savedDate = dateFormat.parse(savedData_json.path("Meta Data").get("3. Last Refreshed").asText());
+
+                if (!savedDate.before(yesterday)) { // If data is less than 24 hours old
+                    return savedData_json;
+                }
+
+            }
+        }
+
+        /*First fetch data from aplphavantage  */
+        String result = dataFetcher.getForObject(url, String.class);
+        JsonNode data = mapper.readTree(result);
+
+        /*If cachecheck is disabled respond with data as is*/
+        if (!checkCache) {
+            return data;
+        }
+
+        /*If  request is not successful and the cache exist */
+        if (!data.has("Time Series (" + interval + ")") && savedData != null) {
+            return mapper.readTree(savedData);
+        }
+
+        /*If fetched data is valid and ishardcoded company then save to cache*/
+        if (data.has("Time Series (" + interval + ")") && isHardCoded) {
+            cachedCompany.writeData(interval, result);
+        }
+
+        /*Return the data*/
+        return data;
+
+    }
+
+    /**
+     * Fetches global quote for the given company if the api doesn't respond with properly formatted data return the  cached company data if exist.
+     *
+     * @param function   alphavantage api function
+     * @param symbol     company symbol
+     * @param checkCache if the cache should be checked for failsafe and update
+     * @return JsonNode
+     * @throws Exception error
+     */
+    public JsonNode fetchQuote(String function, String symbol, boolean checkCache) throws Exception {
+        String url = config.getendPoint() + "function=" + function + "&symbol=" + symbol + "&apikey=" + config.getkey();
+        String result = dataFetcher.getForObject(url, String.class);
+        JsonNode data = mapper.readTree(result);
+
+        /*If the checkCache is not true return the response from server as is*/
+        if (!checkCache) {
+            return data;
+        }
+
+        /*If the company is one of hardcoded companies */
+        if (searchInHardCodedCompany(symbol).size() > 0) {
+            /*Get saved data if exist */
+
+
+            CompanyData cachedCompany = new CompanyData(symbol);
+            String savedData = cachedCompany.readData("Quote");
+
+            /*If the cached company data exist and fetched data is not valid return saved data */
+            if (savedData != null && !data.has("Global Quote")) {
+                return mapper.readTree(savedData);
+            }
+
+            /*If the data is valid */
+            if (data.has("Global Quote")) {
+
+                /*If saved data doesn't exist write to file and return */
+                if (savedData == null) {
+                    cachedCompany.writeData("Quote", result);
+                    return data;
+                }
+
+                JsonNode savedData_json = mapper.readTree(savedData);
+                /*Compare the saved data with fetched  data and save if newer data */
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                Date savedDate = dateFormat.parse(savedData_json.path("Global Quote").get("07. latest trading day").asText());
+                Date dataDate = dateFormat.parse(data.path("Global Quote").get("07. latest trading day").asText());
+
+                /*If saved data is older than the fetched data save */
+                if (savedDate.before(dataDate)) {
+                    cachedCompany.writeData("Quote", result);
+                }
+            }
+        }
+
+        return data;
+    }
+
+    /**
+     * Search the company information using keywords fall back to hardcoded results if fail
+     *
+     * @param function alphavantage Api function
+     * @param keyword  search keyword
+     * @return Json
+     */
+    public JsonNode search(String function, String keyword) throws JsonProcessingException {
+        String url = config.getendPoint() + "function=" + function + "&keywords=" + keyword + "&apikey=" + config.getkey();
+        String result = dataFetcher.getForObject(url, String.class);
+
+        JsonNode data = mapper.readTree(result);
+
+        /*
+          If the search was not successful check if the search matches hardcoded
+          companies
+         */
+        if (data.get("bestMatch") == null) {
+            ArrayList<String[]> matches = searchInHardCodedCompany(keyword);
+
+            //If the local search returns a match
+            if (matches.size() > 0) {
+                ObjectNode wrapper = mapper.createObjectNode();
+                ArrayNode node = mapper.createArrayNode();
+                wrapper.set("bestMatches", node);
+
+                matches.forEach(k -> {
+                    ObjectNode match = mapper.createObjectNode();
+                    match.put("1. symbol", k[0]);
+                    match.put("2. name", k[1]);
+                    match.put("3. type", "Equity");
+                    match.put("4. region", "United States");
+                    node.add(match);
+                });
+
+                return wrapper.deepCopy();
+            }
+        }
+        return data;
+    }
+
+    /**
+     * Search the if the keyword matches the company stored in companies property
+     * @keyword keyword to search
+     * @return Arraylist[symbol, name] with matches
+     */
+    private ArrayList<String[]> searchInHardCodedCompany(String keyword) {
+        Map<String, String> companies = config.getcompanies();
+        ArrayList<String[]> matches = new ArrayList<>();
+        companies.forEach((k, v) -> {
+            if (k.toLowerCase().contains(keyword.toLowerCase()) || v.toLowerCase().contains(keyword.toLowerCase())) {
+                String[] data = new String[]{k, v};
+                matches.add(data);
+            }
+        });
+        return matches;
+    }
+}
+
+
