@@ -30,7 +30,7 @@ const getUrl = (): {apiBaseUrl: string | null , baseurl: string} => {
 export const symbol_search_api =(keyword:string) : string => {
   const { baseurl,apiBaseUrl } =  getUrl()
   const route = apiBaseUrl?'search':'query'
-  return `${baseurl}/${route}?function=SYMBOL_SEARCH&keywords=${keyword}&apikey=${apikey[randomIndex(apikey.length)]}`
+  return `${baseurl}${route}?function=SYMBOL_SEARCH&keywords=${keyword}&apikey=${apikey[randomIndex(apikey.length)]}`
 }
 
 /**
@@ -42,7 +42,7 @@ export const symbol_search_api =(keyword:string) : string => {
 export const time_series_daily_api = (symbol:string, outputsize: DATA_OUTPUTSIZE) : string => {
   const { baseurl, } =  getUrl()
   const route = 'query'
-  return `${baseurl}/${route}?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=${outputsize}&apikey=${apikey[randomIndex(apikey.length)]}`
+  return `${baseurl}${route}?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=${outputsize}&apikey=${apikey[randomIndex(apikey.length)]}`
 }
 
 /**
@@ -55,7 +55,7 @@ export const time_series_daily_api = (symbol:string, outputsize: DATA_OUTPUTSIZE
 export const time_series_intraday_api = (symbol:string, outputsize:DATA_OUTPUTSIZE ,interval: DATA_INTERVAL) : string => {
   const { baseurl, } =  getUrl()
   const route = 'query'
-  return `${baseurl}/${route}?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputsize}&apikey=${apikey[randomIndex(apikey.length)]}`
+  return `${baseurl}${route}?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputsize}&apikey=${apikey[randomIndex(apikey.length)]}`
 }
 
 /**
@@ -66,7 +66,7 @@ export const time_series_intraday_api = (symbol:string, outputsize:DATA_OUTPUTSI
 export const global_quote_api =  (symbol:string) : string => {
   const { baseurl, apiBaseUrl } =  getUrl()
   const route = apiBaseUrl?'quote':'query'
-  return `${baseurl}/${route}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apikey[randomIndex(apikey.length)]}`
+  return `${baseurl}${route}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apikey[randomIndex(apikey.length)]}`
 }
 
 // eslint-disable-next-line import/no-anonymous-default-export
