@@ -1,5 +1,6 @@
 # StockMarketTracker
 Simple stock market tracking app buil as a assignment project.
+Check live demo at https://stocktraker.herokuapp.com/demo
 
 #
  SpringBoot as backend  
@@ -12,12 +13,12 @@ The data is fetched from https://www.alphavantage.co/ using the free api version
 
 Api calls are limited to 5 per minutes and 500 per day. Thus usability of app depends around this quota. On the root url app fetches data directly from the provider so is bound to fail for multiple request 
 
-On the /demo endpoint api calls are routed through the app server and the data for "Microsoft , Sony , Apple , Tesla , Nokia" is cached every 24 hours so the searching these compnies is not affected due to the limitations
+On the /demo endpoint api calls are routed through the app server and the data for "Microsoft , Sony , Apple , Tesla , Nokia" is cached every 24 hours so the searching these companies is not affected due to the limitations
 
 ## Devlopement Instructions 
     $ ./mvnw spring-boot:run 
 
-If you want to build the project 
+## If you want to build the project 
 
     $ ./mvnw clean package
 
