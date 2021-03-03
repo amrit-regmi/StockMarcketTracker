@@ -1,7 +1,6 @@
 /**Function to store apiBaseUrl to local storage  */
 export const setBaseApiBaseUrlToHost = ():void => {
-  let apibaseUrl = process.env.HOSTNAME || window.location.host
-  console.log(apibaseUrl,process.env.HOSTNAME)
+  let apibaseUrl = ''
   if((window.location.host.includes('localhost'))){
 
     apibaseUrl = 'http://localhost:8080'
