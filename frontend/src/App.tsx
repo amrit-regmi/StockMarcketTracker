@@ -28,7 +28,7 @@ const App:FC = () =>  {
   return (
     <Container style= {{ minWidth:'95%' }}>
       <StoreProvider>
-        {/*<InfoBar></InfoBar>*/}
+        <InfoBar/>
         <Error/>
         <SegmentGroup horizontal  >
           <Segment>
