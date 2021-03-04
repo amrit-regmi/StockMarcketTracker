@@ -30,7 +30,7 @@ const Graph:FC  = () => {
     <Segment  >
       <LoadingIndicator/>
       <IntervalChooser/>
-      <ResponsiveContainer width='100%' aspect={5.0/3.0}>
+      <ResponsiveContainer width='98%' aspect={4.0/2.0}>
         <LineChart data={data || []} margin= {{ top:20 }}>
           <CartesianGrid vertical={false} />
           <XAxis
